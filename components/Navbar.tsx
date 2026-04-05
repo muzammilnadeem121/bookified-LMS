@@ -1,9 +1,9 @@
 "use client"
-import React from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
 import { usePathname } from 'next/navigation';
 import { cn } from '@/lib/utils';
+import { useUser, SignInButton, UserButton } from "@clerk/nextjs"
 
 const Navbar = () => {
 
@@ -13,6 +13,7 @@ const Navbar = () => {
     ];
 
     const pathName = usePathname();
+    const {user, isSignedIn} = useUser();
 
   return (
     <header className='w-full fixed z-50 bg-("--bg-primary")'>
@@ -27,10 +28,25 @@ const Navbar = () => {
                     navItems.map(({label, href})=>{
                         const isActive = pathName == href || (href != "/" && pathName.startsWith(href));
                         return (
-                            <Link href={"href"} key={label} className={cn("nav-link-base", isActive ? "nav-link-active" : "text-black hover:opacity-70")}>{label}</Link>
+                            <Link href={href} key={label} className={cn("nav-link-base", isActive ? "nav-link-active" : "text-black hover:opacity-70")}>{label}</Link>
                         )
                     })
                 }
+                <div className='flex gap-7.5 items-center'>
+                {!isSignedIn ? (
+                    <SignInButton mode='modal'></SignInButton>
+                )
+                : ( 
+                    <div className='nav-user-link'>
+                        <UserButton/> 
+                        {user?.firstName && (
+                            <Link href={"/subscriptions"} className='nav-user-name'>{user.firstName}</Link>
+                        )}
+                    </div>
+                )
+                }
+                </div>
+                
             </nav>
         </div>
     </header>
