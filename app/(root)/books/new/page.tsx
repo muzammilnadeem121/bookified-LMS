@@ -1,4 +1,5 @@
 import React from 'react'
+import UploadForm from '@/components/UploadForm'
 
 const page = () => {
   return (
@@ -10,6 +11,7 @@ const page = () => {
                     upload a PDF to generate your Interactive Interview
                 </p>
             </section>
+            <UploadForm></UploadForm>
         </div>
     </main>
   )
