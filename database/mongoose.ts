@@ -1,5 +1,4 @@
 import mongoose from "mongoose";
-import { cache } from "react";
 
 const MONGODB_URI = process.env.MONGODB_URI
 
@@ -21,6 +20,7 @@ export const connectToDatabase = async ()=>{
 
     if (!cached.promise) {
         cached.promise = mongoose.connect(MONGODB_URI, {
+            tls: true,
             bufferCommands: false
         });
     }

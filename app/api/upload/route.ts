@@ -1,43 +1,89 @@
 import { MAX_FILE_SIZE } from "@/lib/constants";
 import { auth } from "@clerk/nextjs/server";
-import { handleUpload, HandleUploadBody } from "@vercel/blob/client";
+import { handleUpload, type HandleUploadBody } from "@vercel/blob/client";
 import { NextResponse } from "next/server";
 
 export async function POST(request: Request): Promise<NextResponse> {
-    const body = (await request.json()) as HandleUploadBody;
-
+    console.log("🚀 Upload API Route Hit");
+    
     try {
-        const jsonResponse = await handleUpload(
-            {
-                token: process.env.BLOB_READ_WRITE_TOKEN,
-                body,
-                request,
-                onBeforeGenerateToken: async () => {
-                    const { userId } = await auth();
+        // Check environment
+        const token = process.env.BLOB_READ_WRITE_TOKEN;
+        if (!token) {
+            console.error("❌ BLOB_READ_WRITE_TOKEN is missing!");
+            return NextResponse.json(
+                { error: "Server configuration error: BLOB_READ_WRITE_TOKEN not set" },
+                { status: 500 }
+            );
+        }
+        console.log("✅ Token exists, prefix:", token.substring(0, 20));
 
-                    if (!userId) {
-                        throw new Error("Unauthorized: User not authenticated")
-                    }
+        // Parse request body
+        console.log("creating body as HandleUploadBody");
+        const body = await request.json() as HandleUploadBody;
+        console.log("✅ Body parsed:", JSON.stringify(body).substring(0, 100));
 
-                    return {
-                        allowedContentTypes: ["application/pdf", "image/jpeg", "image/png", "image/webp"],
-                        addRandomSuffix: true,
-                        maximumSizeInBytes: MAX_FILE_SIZE,
-                        tokenPayload: JSON.stringify({ userId })
-                    }
-                },
-                onUploadCompleted: async ({blob, tokenPayload})=>{
-                    console.log("File Uploaded to Blob:" + blob.url)
+        // Call handleUpload
+        console.log("now handleUpload");
+        const jsonResponse = await handleUpload({
+            body,
+            request,
+            token, // Explicitly pass token
+            onBeforeGenerateToken: async (pathname) => {
+                console.log("📝 onBeforeGenerateToken called for:", pathname);
+                
+                const { userId } = await auth();
+                console.log("👤 User ID:", userId);
 
-                    const payload = tokenPayload ? JSON.parse(tokenPayload) : null;
-                    const userId = payload?.userId;
-
+                if (!userId) {
+                    console.error("❌ User not authenticated");
+                    throw new Error("Unauthorized: User not authenticated");
                 }
-            })
-            return NextResponse.json(jsonResponse);
+
+                const config = {
+                    allowedContentTypes: [
+                        "application/pdf",
+                        "image/jpeg",
+                        "image/png",
+                        "image/webp"
+                    ],
+                    addRandomSuffix: true,
+                    maximumSizeInBytes: MAX_FILE_SIZE,
+                    tokenPayload: JSON.stringify({ userId })
+                };
+                
+                console.log("✅ Returning config:", config);
+                return config;
+            },
+            onUploadCompleted: async ({ blob, tokenPayload }) => {
+                console.log("✅ Upload completed successfully!");
+                console.log("📁 Blob URL:", blob.url);
+                console.log("📁 Blob pathname:", blob.pathname);
+            }
+        });
+
+        console.log("✅ handleUpload succeeded");
+        console.log("📤 Returning response:", JSON.stringify(jsonResponse).substring(0, 200));
+        
+        return NextResponse.json(jsonResponse);
+        
     } catch (error) {
-        const message = error instanceof Error ? error.message : "An unknown error occured";
-        const status = message.includes("Unauthorized") ? 401 : 500
-        return NextResponse.json({ error: message }, { status })
+        console.error("❌❌❌ API Route Error ❌❌❌");
+        console.error("Error type:", error?.constructor?.name);
+        console.error("Error message:", error instanceof Error ? error.message : String(error));
+        console.error("Error stack:", error instanceof Error ? error.stack : 'No stack');
+        console.error("Full error object:", JSON.stringify(error, Object.getOwnPropertyNames(error)));
+        
+        const message = error instanceof Error ? error.message : "An unknown error occurred";
+        const status = message.includes("Unauthorized") ? 401 : 500;
+        
+        return NextResponse.json(
+            { 
+                error: message,
+                type: error?.constructor?.name,
+                details: error instanceof Error ? error.stack : undefined
+            },
+            { status }
+        );
     }
 }
