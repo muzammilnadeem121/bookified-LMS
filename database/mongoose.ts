@@ -20,7 +20,6 @@ export const connectToDatabase = async ()=>{
 
     if (!cached.promise) {
         cached.promise = mongoose.connect(MONGODB_URI, {
-            tls: true,
             bufferCommands: false
         });
     }
