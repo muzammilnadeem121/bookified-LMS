@@ -6,6 +6,7 @@ import {escapeRegex, generateSlug, serializeData} from "@/lib/utils";
 import Book from "@/database/models/book.model";
 import BookSegment from "@/database/models/bookSegment.model";
 import mongoose from "mongoose";
+import { success } from "zod";
 // import {getUserPlan} from "@/lib/subscription.server";
 
 export const getAllBooks = async (search?: string) => {
@@ -205,6 +206,13 @@ export const searchBookSegments = async (bookId: string, query: string, limit: n
         if (segments.length === 0) {
             const keywords = query.split(/\s+/).filter((k) => k.length > 2);
             const pattern = keywords.map(escapeRegex).join('|');
+
+            if (keywords.length === 0) {
+                return {
+                    success: true,
+                    data: []
+                }
+            }
 
             segments = await BookSegment.find({
                 bookId: bookObjectId,
