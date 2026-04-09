@@ -9,6 +9,7 @@ import { ASSISTANT_ID, DEFAULT_VOICE, VOICE_SETTINGS } from '@/lib/constants';
 import { getVoice } from '@/lib/utils';
 import { IBook, Messages } from '@/types';
 import { createVoiceSession, endVoiceSession } from '@/lib/actions/session.actions';
+import { toast } from 'sonner';
 
 export function useLatestRef<T>(value: T) {
     const ref = useRef(value);
@@ -176,6 +177,9 @@ export function useVapi(book: IBook) {
                     setLimitError('Session ended due to inactivity. Click the mic to start again.');
                 } else if (errorMessage.includes('network') || errorMessage.includes('connection')) {
                     setLimitError('Connection lost. Please check your internet and try again.');
+                }
+                else if(errorMessage.includes("no mic") || errorMessage.includes("devices error")){
+                    setLimitError("Device Error: No Microphone or Speaker found.")
                 } else {
                     setLimitError('Session ended unexpectedly. Click the mic to start again.');
                 }
@@ -246,6 +250,44 @@ export function useVapi(book: IBook) {
             return;
         }
 
+        try {
+        // 1. Check if the browser even supports mediaDevices
+        if (!navigator.mediaDevices || !navigator.mediaDevices.enumerateDevices) {
+            toast.error("Browser Not Supported", {
+                description: "Your browser doesn't support microphone access."
+            });
+            return;
+        }
+
+        // 2. Try to find at least one audio input device
+        const devices = await navigator.mediaDevices.enumerateDevices();
+        const hasMic = devices.some(device => device.kind === 'audioinput');
+
+        if (!hasMic) {
+            toast.error("No Microphone Detected", {
+                description: "Please plug in a microphone or headset to continue.",
+                duration: 5000,
+            });
+            return; // Stop the execution here
+        }
+
+        // 3. Optional: Try to trigger the permission prompt immediately
+        // This catches if the user has "Blocked" the site previously
+        try {
+            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            stream.getTracks().forEach(track => track.stop()); // Close it immediately after checking
+        } catch (err) {
+            toast.error("Microphone Permission Denied", {
+                description: "Please allow microphone access in your browser settings (the lock icon next to the URL)."
+            });
+            return;
+        }
+    }catch (err) {
+        console.error("Hardware check failed:", err);
+        toast.error("Hardware Error", {
+            description: "Something went wrong while checking your microphone."
+        });
+    }
         setLimitError(null);
         setIsBillingError(false);
         setStatus('connecting');

@@ -5,17 +5,13 @@ import { ArrowLeft, MicOff, Mic } from "lucide-react";
 
 import { getBookBySlug } from "@/lib/actions/book.actions";
 import VapiControls from "@/components/VapiControls";
+import { useClerk } from "@clerk/nextjs";
 
 export default async function BookDetailsPage({
   params,
 }: {
   params: Promise<{ slug: string }>;
 }) {
-  const { userId } = await auth();
-
-  if (!userId) {
-    redirect("/sign-in");
-  }
 
   const { slug } = await params;
   const result = await getBookBySlug(slug);

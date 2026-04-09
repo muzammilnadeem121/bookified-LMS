@@ -1,10 +1,27 @@
+"use client"
 import { BookCardProps } from '@/types'
+import { useAuth, useClerk } from '@clerk/nextjs';
 import Image from 'next/image'
-import Link from 'next/link'
+import { useRouter } from 'next/navigation';
 
 const BookCard = ({ title, author, coverURL, slug }: BookCardProps) => {
+
+    const { userId } = useAuth()
+    const { openSignIn } = useClerk();
+    const router = useRouter();
+    async function handleClick(){
+        
+          if (!userId) {
+            openSignIn({
+                forceRedirectUrl: `/books/${slug}`
+              });
+          }else {
+            router.push(`/books/${slug}`);
+          }
+    }
+
     return (
-        <Link href={`/books/${slug}`}>
+        <button onClick={handleClick} className='cursor-pointer'>
             <article className={"book-card"}>
                 <figure className='book-card-figure'>
                     <div className="book-card-cover-wrapper">
@@ -16,7 +33,7 @@ const BookCard = ({ title, author, coverURL, slug }: BookCardProps) => {
                     <p className='book-card-author'>{author}</p>
                 </figcaption>
             </article>
-        </Link>
+        </button>
     )
 }
 
