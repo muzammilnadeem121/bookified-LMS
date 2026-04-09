@@ -3,12 +3,32 @@
 import voiceSession from "@/database/models/voiceSession.model";
 import { connectToDatabase } from "@/database/mongoose";
 import { EndSessionResult, StartSessionResult } from "@/types";
-import { getCurrentBillingPeriodStart } from "../subscription-constants";
 
 export const createVoiceSession = async(clerkId : string, bookId : string) : Promise<StartSessionResult> =>{
     try {
         await connectToDatabase();
+        const { getUserPlan } = await import("@/lib/subscription.server");
+        const { PLAN_LIMITS, getCurrentBillingPeriodStart } = await import("@/lib/subscription-constants");
 
+        const plan = await getUserPlan();
+        const limits = PLAN_LIMITS[plan];
+        const billingPeriodStart = getCurrentBillingPeriodStart();
+
+        const sessionCount = await voiceSession.countDocuments({
+            clerkId,
+            billingPeriodStart
+        });
+
+        if (sessionCount >= limits.maxSessionsPerMonth) {
+            const { revalidatePath } = await import("next/cache");
+            revalidatePath("/");
+
+            return {
+                success: false,
+                error: `You have reached the monthly session limit for your ${plan} plan (${limits.maxSessionsPerMonth}). Please upgrade for more sessions.`,
+                isBillingError: true,
+            };
+        }
         const session = await voiceSession.create({clerkId, bookId, startedAt: new Date(), billingPeriodStart: getCurrentBillingPeriodStart(), durationSeconds: 0})
         return {
             success: true,

@@ -1,14 +1,43 @@
 'use client';
-import React from 'react'
 import { Mic, MicOff } from 'lucide-react'
 import { IBook } from '@/types';
 import useVapi from '@/hooks/useVapi';
 import Image from 'next/image';
 import Transcript from './Transcript';
+import { formatDuration } from '@/lib/utils';
+import { useRouter } from 'next/navigation';
+import { toast } from 'sonner';
+import { useEffect } from 'react';
 
 const VapiControls = ({ book }: { book: IBook }) => {
+    
+    const { status, isActive, messages, currentMessage, limitError, isBillingError, currentUserMessage, duration, start, stop, clearError, maxDurationSeconds } = useVapi(book);
+    const router = useRouter();
 
-    const { status, isActive, messages, currentMessage, currentUserMessage, duration, start, stop, clearError } = useVapi(book);
+    useEffect(() => {
+        if (limitError) {
+            toast.error(limitError);
+            if (isBillingError) {
+                router.push("/subscriptions");
+            } else {
+                router.push("/");
+            }
+            clearError();
+        }
+    }, [isBillingError, limitError, router, clearError]);
+
+        const getStatusDisplay = () => {
+        switch (status) {
+            case 'connecting': return { label: 'Connecting...', color: 'vapi-status-dot-connecting' };
+            case 'starting': return { label: 'Starting...', color: 'vapi-status-dot-starting' };
+            case 'listening': return { label: 'Listening', color: 'vapi-status-dot-listening' };
+            case 'thinking': return { label: 'Thinking...', color: 'vapi-status-dot-thinking' };
+            case 'speaking': return { label: 'Speaking', color: 'vapi-status-dot-speaking' };
+            default: return { label: 'Ready', color: 'vapi-status-dot-ready' };
+        }
+    };
+
+    const statusDisplay = getStatusDisplay();
 
     return (
         <>
@@ -21,7 +50,7 @@ const VapiControls = ({ book }: { book: IBook }) => {
                         width={120}
                         height={180}
                         className="vapi-cover-image !w-[120px] !h-auto"
-                        priority
+                        unoptimized
                     />
                     <div className="vapi-mic-wrapper relative">
                         {isActive && (status === 'speaking' || status === 'thinking') && (
@@ -51,8 +80,8 @@ const VapiControls = ({ book }: { book: IBook }) => {
 
                         <div className="flex flex-wrap gap-3">
                             <div className="vapi-status-indicator">
-                                {/* <span className={`vapi-status-dot ${statusDisplay.color}`} /> */}
-                                {/* <span className="vapi-status-text">{statusDisplay.label}</span> */}
+                                <span className={`vapi-status-dot ${statusDisplay.color}`} />
+                                <span className="vapi-status-text">{statusDisplay.label}</span>
                             </div>
 
                             <div className="vapi-status-indicator">
@@ -61,7 +90,7 @@ const VapiControls = ({ book }: { book: IBook }) => {
 
                             <div className="vapi-status-indicator">
                                 <span className="vapi-status-text">
-                                    {/* {formatDuration(duration)}/{formatDuration(maxDurationSeconds)} */}
+                                    {formatDuration(duration)}/{formatDuration(maxDurationSeconds)}
                                 </span>
                             </div>
                         </div>

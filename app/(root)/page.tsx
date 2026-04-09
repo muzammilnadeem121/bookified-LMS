@@ -1,7 +1,6 @@
 import BookCard from "@/components/BookCard";
 import HeroSection from "@/components/HeroSection";
 import { getAllBooks } from "@/lib/actions/book.actions";
-import { sampleBooks } from "@/lib/constants";
 
 export default async function Home() {
   const bookResults = await getAllBooks()
